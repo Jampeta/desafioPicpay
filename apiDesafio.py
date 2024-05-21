@@ -55,58 +55,42 @@ def adicionar():
 @app.route("/transferir", methods=["PUT"])
 def transfer():
     data = request.json
-    value = data.get('value')
-    id_payer = data.get('payer')
-    id_payee = data.get('payee')
+    valor = data.get('valor')
+    id_remetente = data.get('remetente')
+    id_destinatario = data.get('destinatario')
  
-    if not value or not id_payer or not id_payee:
+    if not valor or not id_remetente or not id_destinatario:
         return jsonify({"Erro": "Valor, pagador e recebedor são obrigatórios!"}), 400
  
     try:
-        payer = collection.find_one({'id': id_payer})
-        payee = collection.find_one({'id': id_payee})
+        remetente = collection.find_one({'id': id_remetente})
+        destinatario = collection.find_one({'id': id_destinatario})
+        
  
-        if payer is None or payee is None:
+        if remetente is None or destinatario is None:
             return jsonify({"Erro": "Pagador ou recebedor não encontrados"}), 404
  
-        if payer['tipo'] == 'lojista':
+        if remetente['tipo'] == 'lojista':
             return jsonify({'Erro': 'O Usuário não pode fazer transferencia!'}), 403
  
-        saldo_payer = float(payer['saldo'])
-        if saldo_payer < value:
+        saldo_remetente = float(remetente['saldo'])
+        if saldo_remetente < valor:
             return jsonify({"Erro": "Saldo Insuficiente!"}), 400
+        
+        try:
+            new_saldo_remetente = saldo_remetente - valor
+            collection.update_one({'id': id_remetente}, {'$set': {'saldo': new_saldo_remetente}})
+        except Exception as e:
+            return jsonify({"Erro": str(e)}), 500
  
-        new_saldo_payer = saldo_payer - value
-        collection.update_one({'id': id_payer}, {'$set': {'saldo': new_saldo_payer}})
- 
-        saldo_payee = float(payee['saldo'])
-        new_saldo_payee = saldo_payee + value
-        collection.update_one({'id': id_payee}, {'$set': {'saldo': new_saldo_payee}})
+        try:
+            saldo_destinatario = float(destinatario['saldo'])
+            new_saldo_destinatario = saldo_destinatario + valor
+            collection.update_one({'id': id_destinatario}, {'$set': {'saldo': new_saldo_destinatario}})
+        except Exception as e:
+            return jsonify({"Erro": str(e)}), 500
 
-        pythoncom.CoInitialize()
-        outlook = win32.Dispatch('outlook.application')
-        email = outlook.CreateItem(0)
-
-        nome_payer = payer.get('nome')
-        nome_payee = payee.get('nome')
-        email_payer = str(payer.get('email'))
-        email_payee = str(payee.get('email'))
-
-        email.To = email_payee + "; " + email_payer
-        email.Subject = "Transferencia ocorrida PICPAY"
-        email.HTMLBody = f"""
-        <h2>Resumo da transferencia</h2>
-        <hr></hr>
-
-        <p>O valor transferido foi <strong>R${value}</strong></p>
-        <p>Nome do remetente: {nome_payer}</p>
-        <p>Nome do destinatario: {nome_payee}</p>
-    
-        <p>Abs,</p>
-        <p>Picpay de python :)</p>
-        """
-
-        email.Send()
+        sendEmail(remetente, destinatario, valor)
         
         return jsonify({'Status': 'Transferencia Concluida!'}), 200
     except Exception as e:
@@ -128,6 +112,32 @@ def delete():
     else:
         return jsonify({"Error": "O usuario não existe"})
 
+def sendEmail(payer, payee, value):
+    pythoncom.CoInitialize()
+    outlook = win32.Dispatch('outlook.application')
+    email = outlook.CreateItem(0)
+
+    nome_payer = payer.get('nome')
+    nome_payee = payee.get('nome')
+    email_payer = str(payer.get('email'))
+    email_payee = str(payee.get('email'))
+
+    email.To = email_payee + "; " + email_payer
+    email.Subject = "Transferencia ocorrida PICPAY"
+    email.HTMLBody = f"""
+    <center><h2>Resumo da transferencia</h2></center>
+    <hr></hr>
+
+    <center><h1 style="color: #00A000"><strong>R${value}</strong></h1></center>
+    <center><div style="display: inline-block">
+        <p>Nome do remetente: <strong>{nome_payer}</strong></p>
+        <p>Nome do destinatario: <strong>{nome_payee}</strong></p>
+    </div></center>
+    <hr></hr>
+    <p><strong>Ass:</strong> Picpay de python ❇️</p>
+    """
+
+    email.Send()
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000, host="0.0.0.0")
