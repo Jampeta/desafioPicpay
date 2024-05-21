@@ -1,0 +1,23 @@
+meta {
+  name: POST
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:5000/add
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "id": 1,
+    "nome":"Gabriel Costa",
+    "cpf": "12345678900",
+    "email": "gabriel@costa.com",
+    "senha": "123",
+    "saldo": 100,
+    "tipo": "usuario"
+  }
+}

@@ -1,0 +1,19 @@
+meta {
+  name: PUT
+  type: http
+  seq: 4
+}
+
+put {
+  url: http://localhost:5000/transferir
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "value": 20,
+    "payer": "1",
+    "payee": "2"
+  }
+}
