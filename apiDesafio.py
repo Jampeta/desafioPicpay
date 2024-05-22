@@ -63,7 +63,8 @@ def adicionar():
         return jsonify({'mensagem': 'Documento (cpf) já existe'}), 400
     if objeto_email:
         return jsonify({'mensagem': 'Documento (email) já existe'}), 400
-    
+    if tipo != "lojista" and tipo != "usuario":
+        return jsonify({'mensagem': 'O tipo deve ser apenas usuario ou lojista'}), 400
 
     try:
         resultado = collection.insert_one(data_nova)
