@@ -31,21 +31,42 @@ def mongo_read():
 
 @app.route('/add', methods=['POST'])
 def adicionar():
-    dados = request.get_json()
+    data = request.get_json()
+    data_nova = {
+        "id": data.get('id'),
+        "nome": data.get('nome'),
+        "cpf": data.get('cpf'),
+        "email": data.get('email'),
+        "senha": data.get('senha'),
+        "saldo": data.get('saldo'),
+        "tipo": data.get('tipo')
+    }
 
     campos_obrigatorios = ['id', 'nome', 'cpf', 'email', 'senha', 'saldo', 'tipo']
     for campo in campos_obrigatorios:
-        if campo not in dados or not dados[campo]:
+        if campo not in data_nova or not data_nova[campo]:
             return jsonify({'erro': f'O campo {campo} é obrigatório e não pode estar vazio.'}), 40
         
-    cod = dados.get('id')
-    objeto = collection.find_one({'id': cod})
+    cod = data_nova.get('id')
+    cpf = data_nova.get('cpf')
+    email = data_nova.get('email')
+    tipo = str(data_nova.get('tipo'))
+    objeto_cod = collection.find_one({'id': cod})
+    objeto_cpf = collection.find_one({'cpf': cpf})
+    objeto_email = collection.find_one({'email': email})
+    
+    
 
-    if objeto:
-        return jsonify({'mensagem': 'Documento já existe'}), 400
+    if objeto_cod:
+        return jsonify({'mensagem': 'Documento (id) já existe'}), 400
+    if objeto_cpf:
+        return jsonify({'mensagem': 'Documento (cpf) já existe'}), 400
+    if objeto_email:
+        return jsonify({'mensagem': 'Documento (email) já existe'}), 400
+    
 
     try:
-        resultado = collection.insert_one(dados)
+        resultado = collection.insert_one(data_nova)
         return jsonify({'mensagem': 'Documento adicionado com sucesso!', 'id': str(resultado.inserted_id)}), 201
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
@@ -55,9 +76,15 @@ def adicionar():
 @app.route("/transferir", methods=["PUT"])
 def transfer():
     data = request.json
-    valor = data.get('valor')
-    id_remetente = data.get('remetente')
-    id_destinatario = data.get('destinatario')
+    data_nova = {
+        "remetente": data.get('remetente'),
+        "destinatario": data.get('destinatario'),
+        "valor": data.get('valor')
+    }
+
+    valor = data_nova.get('valor')
+    id_remetente = data_nova.get('remetente')
+    id_destinatario = data_nova.get('destinatario')
  
     if not valor or not id_remetente or not id_destinatario:
         return jsonify({"Erro": "Valor, pagador e recebedor são obrigatórios!"}), 400
