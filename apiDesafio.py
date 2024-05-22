@@ -77,17 +77,21 @@ def transfer():
         if saldo_remetente < valor:
             return jsonify({"Erro": "Saldo Insuficiente!"}), 400
         
+        saldo_temp_remetente = remetente['saldo']
         try:
             new_saldo_remetente = saldo_remetente - valor
             collection.update_one({'id': id_remetente}, {'$set': {'saldo': new_saldo_remetente}})
         except Exception as e:
+            collection.update_one({'id': id_remetente}, {'$set': {'saldo': saldo_temp_remetente}})
             return jsonify({"Erro": str(e)}), 500
- 
+        
+        saldo_temp_destinatario = destinatario['saldo']
         try:
             saldo_destinatario = float(destinatario['saldo'])
             new_saldo_destinatario = saldo_destinatario + valor
             collection.update_one({'id': id_destinatario}, {'$set': {'saldo': new_saldo_destinatario}})
         except Exception as e:
+            collection.update_one({'id': id_destinatario}, {'$set': {'saldo': saldo_temp_destinatario}})
             return jsonify({"Erro": str(e)}), 500
 
         sendEmail(remetente, destinatario, valor)
