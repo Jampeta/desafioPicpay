@@ -100,25 +100,32 @@ def transfer():
  
         if remetente['tipo'] == 'lojista':
             return jsonify({'Erro': 'O Usuário não pode fazer transferencia!'}), 403
+        
+        if not validation_antifraud(id_destinatario, id_remetente):
+            return jsonify({"Erro": "Fraude detectada!"}), 403
  
         saldo_remetente = float(remetente['saldo'])
         if saldo_remetente < valor:
             return jsonify({"Erro": "Saldo Insuficiente!"}), 400
         
         saldo_temp_remetente = remetente['saldo']
+        saldo_temp_destinatario = destinatario['saldo']
+
         try:
             new_saldo_remetente = saldo_remetente - valor
             collection.update_one({'id': id_remetente}, {'$set': {'saldo': new_saldo_remetente}})
         except Exception as e:
             collection.update_one({'id': id_remetente}, {'$set': {'saldo': saldo_temp_remetente}})
+            collection.update_one({'id': id_destinatario}, {'$set': {'saldo': saldo_temp_destinatario}})
             return jsonify({"Erro": str(e)}), 500
         
-        saldo_temp_destinatario = destinatario['saldo']
+        
         try:
             saldo_destinatario = float(destinatario['saldo'])
             new_saldo_destinatario = saldo_destinatario + valor
             collection.update_one({'id': id_destinatario}, {'$set': {'saldo': new_saldo_destinatario}})
         except Exception as e:
+            collection.update_one({'id': id_remetente}, {'$set': {'saldo': saldo_temp_remetente}})
             collection.update_one({'id': id_destinatario}, {'$set': {'saldo': saldo_temp_destinatario}})
             return jsonify({"Erro": str(e)}), 500
 
@@ -170,6 +177,9 @@ def sendEmail(payer, payee, value):
     """
 
     email.Send()
+
+def validation_antifraud(payee_id, payer_id):
+    return True
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000, host="0.0.0.0")
